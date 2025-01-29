@@ -53,17 +53,20 @@ def extract_features(game: chess.pgn.Game, engine: chess.engine.SimpleEngine, sa
 
     board = chess.Board()
     moves = list(game.mainline_moves())
-
-    last_score = float('-inf')
-    cnt_increasing_score = 0
+    cnt_increasing_score_white = 0
+    cnt_increasing_score_black = 0
     infos = engine.analyse(board, chess.engine.Limit(depth=20), multipv=5)
+    last_score_white = mean([get_score(info).score(mate_score=MATE_VALUE) for info in infos])
+    last_score_black = -mean([get_score(info).score(mate_score=MATE_VALUE) for info in infos])
 
     for i, move in enumerate(moves):
         if log:
             print(f'[pre] move: {i}/{len(moves)}')
 
+        cur_turn = board.turn
+
         features['link'].append(link)
-        features['turn'].append(board.turn)
+        features['turn'].append(cur_turn)
 
         dif_depth_scores = []
         for depth in [5, 10, 15, 20, 25]:
@@ -93,8 +96,6 @@ def extract_features(game: chess.pgn.Game, engine: chess.engine.SimpleEngine, sa
         if log:
             print(f'[post] move: {i}/{len(moves)}')
 
-        last_score = mean(best_moves_scores)
-
         features['seldepth_depth_ratio'].append(mean(seldetphs) / mean(depths))
         features['best_moves_score_dispresion'].append(varinace(best_moves_scores))
         features['moves_to_mate'].append(mate_in if mate_in < float('inf') else 0)
@@ -103,14 +104,26 @@ def extract_features(game: chess.pgn.Game, engine: chess.engine.SimpleEngine, sa
         board.push(move)
         infos = engine.analyse(board, chess.engine.Limit(depth=20), multipv=5)
         cur_score = mean([get_score(info).score(mate_score=MATE_VALUE) for info in infos])
-        if cur_score > last_score:
-            cnt_increasing_score += 1
 
         features['threat_to_opponent'].append(count_threats(board.copy(), board.turn))
-        features['consecutive_score_increase'].append(cnt_increasing_score)
-        features['score_change_after_move'].append(cur_score - last_score)
+        features['score_change_after_move'].append(cur_score - (last_score_white if cur_turn == chess.WHITE else last_score_black))
 
-        if i % 3 == 0:
-            pd.DataFrame(features).to_csv(save_path, index=False)
+        if cur_turn == chess.WHITE:
+            if cur_score > last_score_white:
+                cnt_increasing_score_white += 1
+            else:
+                cnt_increasing_score_white = 0
+            last_score_white = cur_score
+        else:
+            if cur_score > last_score_black:
+                cnt_increasing_score_black += 1
+            else:
+                cnt_increasing_score_black = 0
+            last_score_black = cur_score
 
-    return pd.DataFrame(features)
+        features['consecutive_score_increase'].append(cnt_increasing_score_white if cur_turn == chess.WHITE else cnt_increasing_score_black)
+
+    features_df = pd.DataFrame(features)
+    features_df.to_csv(save_path, index=False)
+
+    return features_df
