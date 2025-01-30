@@ -28,102 +28,152 @@ def count_threats(board: chess.Board, color: chess.Color):
     return threats_from_opponent
 
 
-def extract_features(game: chess.pgn.Game, engine: chess.engine.SimpleEngine, save_path: str, link: str = None, log: bool = False):
-    features = {
-        'link': [],
-        'turn': [],
-        'best_moves_score_dispresion': [],
-        'moves_to_mate': [],
-        'score_change_after_move': [],
-        'seldepth_depth_ratio': [],
-        'consecutive_score_increase': [],
+import chess
+import chess.engine
+import chess.pgn
+import pandas as pd
+from typing import List
+
+def count_material(board, side):
+    material_values = {chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9}
+    material_count = 0
+    for piece in board.piece_map().values():
+        if piece.color == side:
+            material_count += material_values.get(piece.piece_type, 0)
+    return material_count
+
+# Функция для вычисления дистанции до мата
+def get_mate_distance(info: List[chess.engine.InfoDict]):
+    distances = []
+    for i in info:
+        if i['score'].relative.is_mate():
+            distances.append(i['score'].relative.mate())
+    if len(distances) == 0:
+        return 0
+    return sum(distances) / len(distances)
+
+# Функция для вычисления средней оценки
+def get_score(info: List[chess.engine.InfoDict]):
+    scores = []
+    for i in info:
+        scores.append(i['score'].relative.score(mate_score=10_000))
+    return sum(scores) / len(scores)
+
+# Функция для получения списка лучших ходов
+def get_best_moves(info: List[chess.engine.InfoDict]):
+    return [i['pv'][0] for i in info]
+
+def extract_features(game: chess.pgn.Game, engine: chess.engine.SimpleEngine, output_csv_path: str, analyze_detph: int = 20, log: bool = False):
+    data = {
+        'delta_score': [],
+        'deviation_from_pv': [],
+        'threats_to_opponent': [],
         'threats_from_opponent': [],
-        'threat_to_opponent': [],
-        'depth_score_dispersion': []
+        'legal_moves_diff': [],
+        'sacrifice': [],
+        'advantage_change': [],
+        'mate_distance': [],
+        'king_under_attack': [],
+
+        'is_capture': [],
+        'is_check': [],
+        'is_checkmate': [],
+        'cnt_promotion': [],
+        'is_used_promotion': [],
+        'is_castling': []
     }
 
-    MATE_VALUE = 1000
-
-    def get_score(info):
-        score = info['score']
-        return score.pov(score.turn)
-
-    if link is None and 'Site' in game.headers:
-        link = game.headers['Site']
-
+    # Анализируем позицию после каждого хода
     board = chess.Board()
-    moves = list(game.mainline_moves())
-    cnt_increasing_score_white = 0
-    cnt_increasing_score_black = 0
-    infos = engine.analyse(board, chess.engine.Limit(depth=20), multipv=5)
-    last_score_white = mean([get_score(info).score(mate_score=MATE_VALUE) for info in infos])
-    last_score_black = -mean([get_score(info).score(mate_score=MATE_VALUE) for info in infos])
-
-    for i, move in enumerate(moves):
+    infos = [engine.analyse(board, limit=chess.engine.Limit(depth=analyze_detph), multipv=3)]
+    mainline_moves = list(game.mainline_moves())
+    for i, move in enumerate(mainline_moves, start=1):
+        board.push(move)
+        info = engine.analyse(board, limit=chess.engine.Limit(depth=analyze_detph), multipv=3)
+        infos.append(info)
         if log:
-            print(f'[pre] move: {i}/{len(moves)}')
+            print(f'move {i}/{len(mainline_moves)}')
+    
+    # Вычисляем сами признаки
+    board = chess.Board()
+    for i, move in enumerate(mainline_moves, start=1):
+        # 1. Изменение оценки позции
+        delta_score = -get_score(infos[i]) - get_score(infos[i - 1])
+        data['delta_score'].append(delta_score)
 
-        cur_turn = board.turn
+        # 2. Отклонение от Principal Variation
+        deviation_from_pv = 1 if move not in get_best_moves(infos[i - 1]) else 0
+        data['deviation_from_pv'].append(deviation_from_pv)
 
-        features['link'].append(link)
-        features['turn'].append(cur_turn)
-
-        dif_depth_scores = []
-        for depth in [5, 10, 15, 20, 25]:
-            info = engine.analyse(board, chess.engine.Limit(depth=depth))
-            dif_depth_scores.append(get_score(info).score(mate_score=MATE_VALUE))
-
-        features['depth_score_dispersion'].append(varinace(dif_depth_scores))
-
-        best_moves_scores = []
-        mate_in = float('inf')
-        depths = []
-        seldetphs = []
-        for info in infos:
-            depths.append(info['depth'])
-            seldetphs.append(info['seldepth'])
-
-            copied_board = board.copy()
-            copied_board.push(info['pv'][0])
-
-            info = engine.analyse(copied_board, chess.engine.Limit(depth=20))
-            score = get_score(info)
-            best_moves_scores.append(score.score(mate_score=MATE_VALUE))
-
-            if score.is_mate():
-                mate_in = min(mate_in, score.mate())
-
-        if log:
-            print(f'[post] move: {i}/{len(moves)}')
-
-        features['seldepth_depth_ratio'].append(mean(seldetphs) / mean(depths))
-        features['best_moves_score_dispresion'].append(varinace(best_moves_scores))
-        features['moves_to_mate'].append(mate_in if mate_in < float('inf') else 0)
-        features['threats_from_opponent'].append(count_threats(board.copy(), board.turn))
+        # 3-4. Угрозы противнику и угрозы от противника
+        player_color = board.turn
+        opponent_color = not board.turn
+        threats_to_opponent = 0
+        threats_from_opponent = 0
 
         board.push(move)
-        infos = engine.analyse(board, chess.engine.Limit(depth=20), multipv=5)
-        cur_score = mean([get_score(info).score(mate_score=MATE_VALUE) for info in infos])
+        for square in chess.SQUARES:
+            piece = board.piece_at(square)
+            if piece and piece.color == opponent_color:
+                if board.is_attacked_by(player_color, square):
+                    threats_to_opponent += 1
+            if piece and piece.color == player_color:
+                if board.is_attacked_by(opponent_color, square):
+                    threats_from_opponent += 1
+        board.pop()
 
-        features['threat_to_opponent'].append(count_threats(board.copy(), board.turn))
-        features['score_change_after_move'].append(cur_score - (last_score_white if cur_turn == chess.WHITE else last_score_black))
+        data['threats_to_opponent'].append(threats_to_opponent)
+        data['threats_from_opponent'].append(threats_from_opponent)
 
-        if cur_turn == chess.WHITE:
-            if cur_score > last_score_white:
-                cnt_increasing_score_white += 1
-            else:
-                cnt_increasing_score_white = 0
-            last_score_white = cur_score
+        # 5. Изменение количества легальных ходов у противника
+        board.turn = not board.turn # Меняем сторону, чтобы посмотреть, какие ходы он впринципе мог бы сейчас сделать
+        legal_moves_before = len(list(board.legal_moves))
+        board.turn = not board.turn
+        board.push(move)
+        legal_moves_after = len(list(board.legal_moves))
+        board.pop()
+
+        legal_moves_diff = legal_moves_after - legal_moves_before
+        data['legal_moves_diff'].append(legal_moves_diff)
+
+        # 6. Жертва материала
+        if 'pv' in infos[i]:
+            cur_turn = board.turn
+            material_before = count_material(board, cur_turn)
+            board.push(move)
+            best_move_from_opponent = get_best_moves(infos[i])[0]
+            board.push(best_move_from_opponent)
+            material_after = count_material(board, cur_turn)
+            board.pop()
+            board.pop()
+
+            data['sacrifice'] = material_after - material_before
         else:
-            if cur_score > last_score_black:
-                cnt_increasing_score_black += 1
-            else:
-                cnt_increasing_score_black = 0
-            last_score_black = cur_score
+            data['sacrifice'] = 0
 
-        features['consecutive_score_increase'].append(cnt_increasing_score_white if cur_turn == chess.WHITE else cnt_increasing_score_black)
+        # 7. Смена преимущества
+        data['advantage_change'].append(1 if get_score(infos[i - 1]) * get_score(infos[i]) > 0 else 0)
 
-    features_df = pd.DataFrame(features)
-    features_df.to_csv(save_path, index=False)
+        # 8. Близость к мату
+        data['mate_distance'].append(-get_mate_distance(infos[i]))
 
-    return features_df
+        # 9. Уязвимость короля противника
+        board.push(move)
+        king_square = board.king(board.turn)
+        data['king_under_attack'].append(1 if board.is_attacked_by(not board.turn, king_square) else 0)
+        board.pop()
+
+        # 10-12. Тактические угрозы и приёмы
+        data['is_capture'].append(board.is_capture(move))
+        board.push(move)
+        data['is_check'].append(board.is_check())
+        data['is_checkmate'].append(board.is_checkmate())
+        board.pop()
+        data['cnt_promotion'].append(sum(1 for mv in board.legal_moves if mv.promotion) // 4)
+        data['is_used_promotion'].append(move.promotion is not None)
+        data['is_castling'].append(board.is_castling(move))
+    
+        # Делаем ход и переходим на следующую итерацию
+        board.push(move)
+    
+    return pd.DataFrame(data)
