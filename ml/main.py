@@ -6,7 +6,7 @@ dataset = ds.read_dataset(
     # path_to_games='features/tmp_data/example_data.pgn',
     path_to_marks='marked_up/markers.txt',
     path_to_engine='stockfish/stockfish-ubuntu-x86-64-sse41-popcnt',
-    save_path='tmp/markedup_dataset.csv',
+    save_path='marked_up/train.csv',
     log=True
 )
 

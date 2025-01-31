@@ -176,4 +176,6 @@ def extract_features(game: chess.pgn.Game, engine: chess.engine.SimpleEngine, ou
         # Делаем ход и переходим на следующую итерацию
         board.push(move)
     
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    df.to_csv(output_csv_path, index=False)
+    return df

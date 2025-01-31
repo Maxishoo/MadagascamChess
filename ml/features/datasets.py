@@ -10,21 +10,21 @@ from .extract import extract_features
 
 def read_mark(file: IO, n_moves: int) -> pd.Series:
     line = file.readline()
+
+    def mark_to_idx(mark: str):
+        number, letter = int(mark[:-1]), mark[-1]
+        return (number - 1) * 2 + int(letter == 'B')
+
     if '-' in line:
         marks = line.split('; ')
+        answer = [0] * n_moves
         for mark in marks:
             left, right = mark.strip().split('-')
-            start, start_color = int(left[:-1]), left[-1]
-            end, end_color = int(right[:-1]), right[-1]
-
-            before = [0] * ((start - 1) * 2 + (start_color == 'B'))
-            middle = [1] * ((end - start + 1) * 2 - (start_color == 'W') - (end_color == 'B'))
-            after = [0] * (n_moves - len(before) - len(middle))
-
-            return pd.Series(before + middle + after)
+            il, ir = mark_to_idx(left), mark_to_idx(right) + 1
+            answer = answer[:il] + [1] * (ir - il) + answer[ir:]
+        return pd.Series(answer, name='target')
     else:
         return None
-
 
 # Размеченные игры
 def read_dataset(path_to_games: str, path_to_marks: str, path_to_engine: str, save_path: str, log=False):
@@ -41,12 +41,15 @@ def read_dataset(path_to_games: str, path_to_marks: str, path_to_engine: str, sa
     with open(path_to_games, 'r') as pgn_file, open(path_to_marks, 'r') as marks_file:
         i = 1
         while (game := chess.pgn.read_game(pgn_file)):
-            marks = read_mark(marks_file, len(list(game.mainline_moves())))
             if log:
                 print(f'[GAME-{i}] Reading...')
 
-            features = extract_features(game, engine, (tmp_path_obj / f'{i}.csv').resolve(), log=log)
-            datasets.append(pd.concat([features, marks], axis=1))
+            cur_save_path = (tmp_path_obj / f'{i}.csv').resolve()
+            features = extract_features(game, engine, cur_save_path, log=log, analyze_detph=16)
+            marks = read_mark(marks_file, features.shape[0])
+            cur_train = pd.concat([features, marks], axis=1)
+            cur_train.to_csv(cur_save_path, index=False)
+            datasets.append(cur_train)
 
             if log:
                 print(f'[GAME-{i}] Done!')
