@@ -2,7 +2,7 @@ import chess
 import chess.pgn
 import chess.engine
 import pandas as pd
-import pathlib
+import os
 
 from typing import IO
 from .extract import extract_features
@@ -27,33 +27,52 @@ def read_mark(file: IO, n_moves: int) -> pd.Series:
         return None
 
 # Размеченные игры
-def read_dataset(path_to_games: str, path_to_marks: str, path_to_engine: str, save_path: str, log=False):
+def read_dataset(path_to_games: str, path_to_engine: str, save_path: str, offset: int = None, n_read: int = 10, path_to_marks: str = None, analyze_detph: int = 16, log=False):
     engine = chess.engine.SimpleEngine.popen_uci(path_to_engine)
-    engine.configure({'Threads': 2})
-    engine.configure({'Hash': 1024})
+    # engine.configure({'Threads': 1})
+    # engine.configure({'Hash': 512})
 
-    save_path_obj = pathlib.Path(save_path)
-    save_path_dir = save_path_obj.parent
-    tmp_path_obj = save_path_dir / 'tmp'
-    tmp_path_obj.mkdir(parents=True, exist_ok=True)
+    tmp_path = f'{save_path}/tmp'
+    os.makedirs(tmp_path, exist_ok=True)
 
+    if offset is None:
+        offset = 0
+        for item in os.listdir(tmp_path):
+            if os.path.isfile(os.path.join(tmp_path, item)):
+                offset = max(offset, int(item.split('.')[0]))
+
+    marks_file = None
     datasets = []
-    with open(path_to_games, 'r') as pgn_file, open(path_to_marks, 'r') as marks_file:
-        i = 1
+    with open(path_to_games, 'r') as pgn_file:
+        if path_to_marks is not None:
+            marks_file = open(path_to_marks, 'r')
+
+        i = 0
         while (game := chess.pgn.read_game(pgn_file)):
+            i += 1
+            if i - offset > n_read:
+                break
+            if i <= offset:
+                continue
+
             if log:
                 print(f'[GAME-{i}] Reading...')
 
-            cur_save_path = (tmp_path_obj / f'{i}.csv').resolve()
-            features = extract_features(game, engine, cur_save_path, log=log, analyze_detph=16)
-            marks = read_mark(marks_file, features.shape[0])
-            cur_train = pd.concat([features, marks], axis=1)
+            cur_save_path = os.path.join(tmp_path, f'{i}.csv')
+            features = extract_features(game, engine, cur_save_path, log=log, analyze_detph=analyze_detph)
+            if marks_file is not None:
+                marks = read_mark(marks_file, features.shape[0])
+                cur_train = pd.concat([features, marks], axis=1)
+            else:
+                cur_train = features
             cur_train.to_csv(cur_save_path, index=False)
             datasets.append(cur_train)
 
             if log:
                 print(f'[GAME-{i}] Done!')
-            i += 1
+        
+        if marks_file is not None:
+            marks_file.close()
     
     engine.close()
     return pd.concat(datasets, axis=0)
