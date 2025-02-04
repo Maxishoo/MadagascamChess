@@ -1,2 +1,3 @@
-# MadagascamChess
-Chess project
+# GPT
+1. Устанавливаем библиотеки в среду
+2. Запускаем
