@@ -102,7 +102,7 @@ class ProcessPGN:
     def __init__(self, path_to_pgn: str):
         with open(path_to_pgn, 'r') as pgn_file:
             self.game = chess.pgn.read_game(pgn_file)
-        self.model = ChatClient(api_key=api_key, model='mistralai/mistral-small-24b-instruct-2501:free')
+        self.model = ChatClient(api_key=api_key, model='meta-llama/llama-3.3-70b-instruct:free')
 
     def make_description(self):
         # def describe_board(board: chess.Board):
@@ -130,92 +130,110 @@ class ProcessPGN:
     
     def make_advanced_description(self):
         n_full_moves = 3
-        raw_description = self.make_description()
 
-        def generate_user_promt(n_moves):
+        def generate_user_prompt(n_moves):
             intro = (
                 'Тебе будет дано описание доски и саммари последних событий, '
-                'которые привели к этому состоянию, а также {} полных хода с кратким описанием. '
-                'Твоя задача состоит из трёх шагов:\n'.format(n_moves)
+                f'которые привели к этому состоянию, а также {n_moves} полных хода с кратким описанием. '
+                'Твоя задача состоит из трёх шагов:\n'
             )
-            
+
             step_1 = (
-                '1. Дать более подробное описание каждого хода, отвечая на вопросы:\n'
+                '1. Проанализируй каждый ход подробно, отвечая на следующие вопросы:\n'
                 '   - Является ли этот ход хорошим?\n'
                 '   - Почему игрок сделал этот ход?\n'
                 '   - Пытается ли игрок выполнить тактический приём?\n'
             )
-            
+
             step_2 = (
-                '2. Описать доску, сделав упор на анализе ключевых фигур.\n'
+                '2. Опиши текущее состояние доски, сделав акцент на ключевых фигурах и их взаимодействии. Не надо приводить вид доски\n'
             )
-            
+
             step_3 = (
-                '3. Написать краткое саммари указанных ходов. Если ты видишь незаконченную связку, '
+                '3. Напиши краткое саммари указанных ходов. Если ты видишь незаконченную связку, '
                 'укажи это. Если ничего особенного не происходило, так и напиши.\n\n'
             )
-            
+
             response_format = (
-                'Итак, формат твоего ответа должен быть таким (Обязательно указывай теги в угловых скобках):\n'
-                '1. <АНАЛИЗ ХОДОВ> ... </АНАЛИЗ ХОДОВ> # Описание ходов в свободной форме. '
-                'Проведи весь необходимый анализ без ограничений.\n'
-                '2. <ОПИСАНИЕ ДОСКИ> ... </ОПИСАНИЕ ДОСКИ> # Расскажи, что происходит на доске, '
-                'расскажи какой игрок обладает преимуществом и почему.\n'
-                '3. <САММАРИ> ... </САММАРИ> # Расскажи о начатых тактических приёмах, интересных '
-                'действиях и всё, что поможет для дальнейшего анализа.\n'
+                'Формат твоего ответа должен быть таким:\n'
+                '<АНАЛИЗ ХОДОВ> ... </АНАЛИЗ ХОДОВ>\n'
+                '<ОПИСАНИЕ ДОСКИ> ... </ОПИСАНИЕ ДОСКИ>\n'
+                '<САММАРИ> ... </САММАРИ>\n'
             )
-            
+
             return ''.join([intro, step_1, step_2, step_3, response_format])
-    
-        system_promt = (
-            'Ты - специалист в области анализа шахматных игр. Ты прекрасно подмечаешь '
-            'красивые связки и тактические приёмы, способен выделить интересные моменты '
-            'и ярко, но лаконично прокомментировать их.'
+
+        system_prompt = (
+            'Ты - эксперт по анализу шахматных партий. Ты умеешь находить тактические идеи, '
+            'выделять важные моменты игры и предоставлять четкие комментарии. '
+            'Твой стиль — яркий, но лаконичный.'
         )
 
-        user_promt = generate_user_promt(n_full_moves)
+        user_prompt = generate_user_prompt(n_full_moves)
 
-        def generate_information(board: chess.Board, description: str, summary: str):
+        def generate_information(
+                description: str, summary: str):
             return (
-                f'<ДОСКА> {board} </ДОСКА>'
                 f'<ОПИСАНИЕ ДОСКИ> {description} </ОПИСАНИЕ ДОСКИ>\n'
                 f'<САММАРИ> {summary} </САММАРИ>\n'
             )
 
-        board = chess.Board()
-        last_answer = generate_information(board, 'Обычная стартовая доска', 'Игра началась')
-        moves_description = ''
+        def extract_tags(completion):
+            """
+            Извлекает содержимое тегов из ответа модели.
+            Возвращает кортеж (analysis, board_description, summary) или None, если теги отсутствуют.
+            """
+            try:
+                start_analysis = completion.index('<АНАЛИЗ ХОДОВ>') + len('<АНАЛИЗ ХОДОВ>')
+                end_analysis = completion.index('</АНАЛИЗ ХОДОВ>')
+                analysis = completion[start_analysis:end_analysis].strip()
 
+                start_board = completion.index('<ОПИСАНИЕ ДОСКИ>') + len('<ОПИСАНИЕ ДОСКИ>')
+                end_board = completion.index('</ОПИСАНИЕ ДОСКИ>')
+                board_description = completion[start_board:end_board].strip()
+
+                start_summary = completion.index('<САММАРИ>') + len('<САММАРИ>')
+                end_summary = completion.index('</САММАРИ>')
+                summary = completion[start_summary:end_summary].strip()
+
+                return analysis, board_description, summary
+            except ValueError:
+                return None
+
+        board = chess.Board()
+        last_answer = generate_information('Обычная стартовая доска', 'Игра началась')
+        moves_description = ''
         advanced_description = f'{last_answer}\n'
+
         for i, move in enumerate(self.game.mainline_moves(), start=1):
             moves_description += describe_move(board, move) + '\n'
             board.push(move)
 
             if i % (2 * n_full_moves) == 0:
-                completion = self.model.create_completion([
-                    self.model.make_system_promt(system_promt),
-                    self.model.make_user_promt(f'{last_answer}\n{moves_description}')
-                ])['content']
+                while True:
+                    # Объединяем все данные для одного запроса
+                    input_data = f'{last_answer}\n{moves_description}'
+                    completion = self.model.create_completion([
+                        self.model.make_system_prompt(system_prompt),
+                        self.model.make_user_prompt(user_prompt),
+                        self.model.make_user_prompt(input_data)
+                    ])['content']
 
-                print('[LOG] completion =', completion, '[/LOG]')
+                    # Пытаемся извлечь теги
+                    result = extract_tags(completion)
 
-                extract_desc_promt = 'Перепиши текст, связанный с описанием доски. Вероятно, он обрамлён тегами <ОПИСАНИЕ ДОСКИ> и  </ОПИСАНИЕ ДОСКИ>. Лишние теги следует убрать.'
-                board_description = self.model.create_completion([
-                    self.model.make_user_promt(f'{extract_desc_promt}\n{completion}')
-                ])['content']
+                    if result:  # Если все теги найдены
+                        print('[LOG] completion =', completion, '[/LOG]')
+                        analysis, board_description, summary = result
+                        break  # Выходим из цикла
+                    else:
+                        print('[INFO] Ответ модели не содержит всех необходимых тегов. Повторный запрос...')
+                        continue  # Повторяем запрос
 
-                print('[LOG] board_description =', board_description, '[/LOG]')
-
-                extract_sum_promt = 'Перепиши текст, связанный с саммари ходов. Вероятно, он обрамлён тегами <САММАРИ> и </САММАРИ>. Лишние теги следует убрать.'
-                summary = self.model.create_completion([
-                    self.model.make_user_promt(f'{extract_sum_promt}\n{completion}')
-                ])['content']
-
-                print('[LOG] summary =', summary, '[/LOG]')
-
-                last_answer = generate_information(board, board_description, summary)
-                print('[LOG]', last_answer, '[/LOG]')
+                # Формируем последнее описание
+                last_answer = generate_information(board_description, summary)
+                print('[LOG] last_answer =', last_answer, '[/LOG]')
                 advanced_description += f'{last_answer}\n'
                 moves_description = ''
-        
+
         return advanced_description

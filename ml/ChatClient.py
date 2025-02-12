@@ -42,14 +42,14 @@ class ChatClient:
             'content': content
         }
 
-    def make_system_promt(self, system_promt: str) -> Dict[str, str]:
+    def make_system_prompt(self, system_prompt: str) -> Dict[str, str]:
         return {
             'role': 'system',
-            'content': system_promt
+            'content': system_prompt
         }
     
-    def make_user_promt(self, user_promt: str) -> Dict[str, str]:
+    def make_user_prompt(self, user_prompt: str) -> Dict[str, str]:
         return {
             'role': 'user',
-            'content': user_promt
+            'content': user_prompt
         }
