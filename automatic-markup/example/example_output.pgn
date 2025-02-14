@@ -1,0 +1,43 @@
+[Event "Rated blitz game"]
+[Site "https://lichess.org/86CWuDrz"]
+[Date "2025.02.14"]
+[Round "?"]
+[White "hudsonsydney00"]
+[Black "SNAP1431"]
+[Result "0-1"]
+[GameId "86CWuDrz"]
+[UTCDate "2025.02.14"]
+[UTCTime "07:34:43"]
+[WhiteElo "1317"]
+[BlackElo "1312"]
+[WhiteRatingDiff "-6"]
+[BlackRatingDiff "+6"]
+[Variant "Standard"]
+[TimeControl "300+0"]
+[ECO "D00"]
+[Opening "Queen's Pawn Game: Accelerated London System"]
+[Termination "Normal"]
+
+1. d4 { [%eval  0.22] } 1... d5 { [%eval  0.18] } 2. Bf4 { [%eval  0.12] } 2...
+Nc6 { [%eval  0.36] } 3. Nc3 { [%eval  0.19] } 3... Bf5 { [%eval  0.31] } 4. e3
+{ [%eval  0.12] } 4... Nf6 { [%eval  0.15] } 5. Bd3 { [%eval  0.14] } 5... e6
+{ [%eval  0.16] } 6. Bxf5 { [%eval  0.20] } 6... exf5 { [%eval  0.18] } 7. f3
+{ [%eval  0.00] } 7... Bb4 { [%eval  0.03] } 8. Qd3 { [%eval -0.05] } 8... Qe7
+{ [%eval  0.17] } 9. Qxf5 { [%eval -1.60] } 9... O-O { [%eval  1.28] } 10. Ne2
+{ [%eval  1.24] } 10... Bd6 { [%eval  1.88] } 11. O-O { [%eval  0.02] } 11...
+Bxf4 { [%eval  0.04] } 12. Nxf4 { [%eval -2.85] } 12... g6 { [%eval  1.88] }
+13. Qh3 { [%eval -5.36] } 13... Qxe3+ { [%eval -5.20] } 14. Kh1
+{ [%eval -5.30] } 14... Qxf4 { [%eval -5.24] } 15. g3 { [%eval -5.16] } 15...
+Qxd4 { [%eval -5.43] } 16. Rad1 { [%eval -5.55] } 16... Qb4 { [%eval -5.53] }
+17. Nxd5 { [%eval -5.89] } 17... Nxd5 { [%eval -5.98] } 18. Rxd5
+{ [%eval -5.94] } 18... Qxb2 { [%eval -6.00] } 19. Qg4 { [%eval -6.16] } 19...
+Qxc2 { [%eval -6.19] } 20. Rh5 { [%eval -8.36] } 20... f5 { [%eval -6.37] } 21.
+Qg5 { [%eval -6.36] } 21... Qe2 { [%eval -6.40] } 22. Rg1 { [%eval -9.26] }
+22... Qxf3+ { [%eval -9.38] } 23. Rg2 { [%eval -9.37] } 23... Qxh5
+{ [%eval -9.36] } 24. Qf4 { [%eval -10.93] } 24... Qd1+ { [%eval -12.82] } 25.
+Rg1 { [%eval #-20] } 25... Qd5+ { [%eval #-19] } 26. Rg2 { [%eval #-19] } 26...
+Ne5 { [%eval -9.89] } 27. Qb4 { [%eval -10.86] } 27... Rad8 { [%eval -10.75] }
+28. h4 { [%eval #-15] } 28... Qd1+ { [%eval #-13] } 29. Kh2 { [%eval #-3] }
+29... Nf3+ { [%eval #-2] } 30. Kh3 { [%eval #-2] } 30... Qh1+ { [%eval #-1] }
+31. Rh2 { [%eval #-1] } 31... Qxh2# { [%eval #0] } 0-1
+

@@ -1,0 +1,22 @@
+[Event "Rated blitz game"]
+[Site "https://lichess.org/86CWuDrz"]
+[Date "2025.02.14"]
+[White "hudsonsydney00"]
+[Black "SNAP1431"]
+[Result "0-1"]
+[GameId "86CWuDrz"]
+[UTCDate "2025.02.14"]
+[UTCTime "07:34:43"]
+[WhiteElo "1317"]
+[BlackElo "1312"]
+[WhiteRatingDiff "-6"]
+[BlackRatingDiff "+6"]
+[Variant "Standard"]
+[TimeControl "300+0"]
+[ECO "D00"]
+[Opening "Queen's Pawn Game: Accelerated London System"]
+[Termination "Normal"]
+
+1. d4 d5 2. Bf4 Nc6 3. Nc3 Bf5 4. e3 Nf6 5. Bd3 e6 6. Bxf5 exf5 7. f3 Bb4 8. Qd3 Qe7 9. Qxf5 O-O 10. Ne2 Bd6 11. O-O Bxf4 12. Nxf4 g6 13. Qh3 Qxe3+ 14. Kh1 Qxf4 15. g3 Qxd4 16. Rad1 Qb4 17. Nxd5 Nxd5 18. Rxd5 Qxb2 19. Qg4 Qxc2 20. Rh5 f5 21. Qg5 Qe2 22. Rg1 Qxf3+ 23. Rg2 Qxh5 24. Qf4 Qd1+ 25. Rg1 Qd5+ 26. Rg2 Ne5 27. Qb4 Rad8 28. h4 Qd1+ 29. Kh2 Nf3+ 30. Kh3 Qh1+ 31. Rh2 Qxh2# 0-1
+
+
