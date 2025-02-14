@@ -1,2 +1,1 @@
-# MadagascamChess
-Chess project
+тут можно подобрать провайдера https://github.com/xtekky/gpt4free/blob/main/docs/providers-and-models.md
