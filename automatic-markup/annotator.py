@@ -19,7 +19,7 @@ class Annotator:
             if score.is_mate():
                 eval_str = f'#{score.mate()}'
             else:
-                eval_str = f'{score.score() / 100 : .2f}'
+                eval_str = f'{score.score() / 100:.2f}'
             
             nag_comment = f'[%eval {eval_str}]'
             node.comment = nag_comment
@@ -73,8 +73,8 @@ def main():
         prog='annotator.py',
         description='takes a pgn file and adds annotations to it'
     )
-    parser.add_argument('--input_pgn', '-i', help='input pgn file', required=True)
-    parser.add_argument('--output_pgn', '-o', help='output png file', default='None')
+    parser.add_argument('--input', '-i', help='input pgn file', required=True)
+    parser.add_argument('--output', '-o', help='output png file', default='None')
     parser.add_argument('--overwrite', help='overwrites the original file', action='store_true', default=False)
     parser.add_argument('--stockfish', '-s', help='(engine settings) path to stockfish executable file', required=True)
     parser.add_argument('--depth', '-d', help='(engine settings) depth of analysis', default=16)
@@ -87,7 +87,7 @@ def main():
     with chess.engine.SimpleEngine.popen_uci(args.stockfish) as engine:
         engine.configure({'Threads': args.threads})
         annotator = Annotator(engine, args.depth)
-        annotator.add_annotations(args.input_pgn, args.output_pgn, overwrite=args.overwrite)
+        annotator.add_annotations(args.input, args.output, overwrite=args.overwrite)
 
 
 if __name__ == '__main__':
