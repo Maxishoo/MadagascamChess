@@ -1,10 +1,4 @@
-Задача:
-Проанализируй данную шахматную партию, представленную в формате PGN, и выдели наиболее интересный отрезок ходов, состоящий не более чем из 10 полуходов. Учти, что нумерация полуходов начинается с 0 (то есть, первый полуход белых имеет индекс 0, а первый полуход черных — индекс 1).
-
-Требования к выводу:
-- Выведи результат строго в формате JSON-массива из двух целых чисел: [начальный номер полухода, конечный номер полухода].
-- Пример корректного вывода: [0, 5] (если интересный отрезок начинается с первого полухода и заканчивается шестым).
-- Если интересный отрезок не найден, выведи пустой JSON-массив: [].
-- Не выводи никакой дополнительной информации, только JSON-массив.
-
+Highlight the most interesting segment of moves on PGN of a chess game (no more than 20 half-moves).
+Note: In chess, one full move consists of two half-moves (white and black), with the first half-move indexed as 0.
+Need to output only the following list: [start number of interesting half-move, end number of interesting half-move].
 PGN:
