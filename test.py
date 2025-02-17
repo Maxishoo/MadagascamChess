@@ -1,8 +1,14 @@
-from chess_analysis import analyze_game
+from chess_analysis import process_directory
 
 prompt_file = "prompt2.txt"
-pgn_file = "event1.pgn"
+pgn_directory = "pgns"
 
-result_alt = analyze_game(prompt_file, pgn_file, model="deepseek-r1")
-print("Ответ модели:")
-print(result_alt)
+
+process_directory(
+    pgn_dir=pgn_directory,
+    prompt_file=prompt_file,
+    model="deepseek-r1",
+    verify=True,
+    output_pgn_file="all_processed.pgn",
+    output_segment_file="all_segments.txt"
+)
