@@ -120,10 +120,26 @@ class Generator:
         result = self.cook_interesting(game, get_tier(game))
 
         if result is not None:
+            game_id = game.headers['GameId']
+
+            # Ходы и разметка
             moves: List[chess.Move] = result[0]
             marks: Tuple[int] = result[1]
+
+            # Рейтинг игроков
+            white_elo = None
+            black_elo = None
+            if 'WhiteElo' in game.headers:
+                white_elo = int(game.headers['WhiteElo'])
+            if 'BlackElo' in game.headers:
+                black_elo = int(game.headers['BlackElo'])
+
+            # Пишем в файл
             with open(output_file, 'w') as file:
                 json.dump({
+                    'id': game_id,
+                    'white_elo': white_elo,
+                    'black_elo': black_elo,
                     'moves': [move.uci() for move in moves],
                     'marks': marks
                 }, file)
